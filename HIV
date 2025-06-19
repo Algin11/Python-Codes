@@ -1,0 +1,419 @@
+#Importing Pandas
+import pandas as pd
+
+
+#Importing the Data
+art_coverage_by_country_clean = pd.read_csv(r"D:\Data Analyst\Data analyst\PROJECTS\HIV CASES\Raw files\art_coverage_by_country_clean.csv")
+pediatric_coverage_by_country = pd.read_csv(r"D:\Data Analyst\Data analyst\PROJECTS\HIV CASES\Raw files\art_pediatric_coverage_by_country_clean.csv")
+no_of_cases_adults_15_to_49_by_country_clean = pd.read_csv(r"D:\Data Analyst\Data analyst\PROJECTS\HIV CASES\Raw files\no_of_cases_adults_15_to_49_by_country_clean.csv")
+deaths_by_country = pd.read_csv(r"D:\Data Analyst\Data analyst\PROJECTS\HIV CASES\Raw files\no_of_deaths_by_country_clean.csv")
+people_living_with_hiv = pd.read_csv(r"D:\Data Analyst\Data analyst\PROJECTS\HIV CASES\Raw files\no_of_people_living_with_hiv_by_country_clean.csv")
+mother_to_child_transmission = pd.read_csv(r"D:\Data Analyst\Data analyst\PROJECTS\HIV CASES\Raw files\prevention_of_mother_to_child_transmission_by_country_clean.csv")
+
+#Checking for Duplicate
+pd.set_option('display.max.rows', 1000)
+pd.set_option('display.max.columns', 1000)
+
+#Checking For Duplicates
+art_coverage_by_country_clean.duplicated().sum()
+pediatric_coverage_by_country.duplicated().sum()
+no_of_cases_adults_15_to_49_by_country_clean.duplicated().sum()
+deaths_by_country.duplicated().sum()
+people_living_with_hiv.duplicated().sum()
+mother_to_child_transmission.duplicated().sum()
+
+#Checking for Null
+art_coverage_by_country_clean.isnull().sum()
+pediatric_coverage_by_country.isnull().sum()
+no_of_cases_adults_15_to_49_by_country_clean.isnull().sum()
+deaths_by_country.isnull().sum()
+people_living_with_hiv.isnull().sum()
+mother_to_child_transmission.isnull().sum()
+
+
+#Dropping the NA Data in the Table
+art_coverage_by_country_clean.dropna(inplace = True)
+pediatric_coverage_by_country.dropna(inplace =True)
+pediatric_coverage_by_country.dropna(inplace = True)
+deaths_by_country.dropna(inplace = True)
+people_living_with_hiv.dropna(inplace = True)
+mother_to_child_transmission.dropna(inplace = True)
+
+
+#Data Manipulation
+#Deaths Per Country Per Year
+deaths_per_year = deaths_by_country[['Year', 
+                                     'Country', 
+                                     'WHO_Region', 
+                                     'Count_median',
+                                     'Count_min',
+                                     'Count_max']].sort_values(by = ['Year','Country'], ascending = [False,True])    
+#Rename Columns
+deaths_per_year = deaths_per_year.rename(columns = {'Count_median': 'Death_median', 'Count_max' : 'Death_max', 'Count_min' : 'Death_min'})
+deaths_per_year 
+
+
+
+#Children Receiving ART
+children_receiving_ART = pediatric_coverage_by_country[['Country', 
+                                                        'WHO_Region',
+                                                        'Reported_number_of_children_receiving_ART',
+                                                        'Estimated_number_of_children_needing_ART_methods_median']]
+pd.options.mode.copy_on_write = True 
+#Changing The Data Type Into Float
+children_receiving_ART['Reported_number_of_children_receiving_ART'] = pediatric_coverage_by_country['Reported_number_of_children_receiving_ART'].astype(float)
+#Inserting The Percentage of Received ART
+children_receiving_ART['Percentage of ART Received'] = children_receiving_ART['Reported_number_of_children_receiving_ART'] / children_receiving_ART['Estimated_number_of_children_needing_ART_methods_median'] * 100
+#Rounding The Percentage
+children_receiving_ART = children_receiving_ART.round(2)
+children_receiving_ART 
+
+
+#People Living With HIV AND People Receiving It
+people_receiving_ART = art_coverage_by_country_clean[['Country',
+                                                      'WHO_Region',
+                                                      'Reported_number_of_people_receiving_ART', 
+                                                      'Estimated_number_of_people_living_with_HIV_median' ]]
+#Changing The Data Type Into Float
+people_receiving_ART['Reported_number_of_people_receiving_ART'] = people_receiving_ART['Reported_number_of_people_receiving_ART'].astype(float)
+#Inserting The Percentage of Received ART
+people_receiving_ART['Percentage Received ART']= people_receiving_ART['Reported_number_of_people_receiving_ART'] / people_receiving_ART['Estimated_number_of_people_living_with_HIV_median'] * 100
+#Rounding The Percentage
+people_receiving_ART = people_receiving_ART.round(2)
+people_receiving_ART
+
+
+#Mother To Child Transmission
+#Making The Table For The Child Transmission Of HIV
+child_transmission = mother_to_child_transmission[['Country',
+                                                   'WHO_Region', 
+                                                   'Received_Antiretrovirals',
+                                                   'Needing_antiretrovirals_median']] 
+#Inserting THe Percent To The Child Transmission
+child_transmission['Percentage Received ART'] = child_transmission['Received_Antiretrovirals'] / child_transmission['Needing_antiretrovirals_median'] * 100
+#Rounding The Data To Two Decimal Places
+child_transmission = child_transmission.round(2)
+child_transmission 
+
+
+#Creating A Table With Number of Cases, Living With HIV, Received ART And Death
+#Creating Table For Coverage By Country That Has People Living With HIV
+coverage_by_country = art_coverage_by_country_clean[['Country',
+                                           'Estimated_number_of_people_living_with_HIV_median',
+                                           'Reported_number_of_people_receiving_ART']]
+#Creating Table For Deaths Per Country
+average_deaths = deaths_by_country[['Country','Count_median']].groupby('Country').agg({'Count_median' : ['max']}).reset_index()
+#Elliminating The Multi Index In The Table
+average_deaths.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in average_deaths.columns]
+#Renaming The Columns For average_deaths
+average_deaths = average_deaths.rename(columns =  {'Count_median_max' : 'Death_Counts'} )
+#Merging The Table coverage_by_country And average_deaths
+cases_and_death =pd.merge(coverage_by_country,average_deaths, on =['Country'], how = 'inner')
+#Changing The Data Type To Float
+cases_and_death['Reported_number_of_people_receiving_ART'] = cases_and_death['Reported_number_of_people_receiving_ART'].astype(float)
+#Inserting The Percentage OF Received ART Into The  cases_and_death Table
+cases_and_death['Percentage_Of_People_Received_ART']= cases_and_death['Reported_number_of_people_receiving_ART'] /cases_and_death['Estimated_number_of_people_living_with_HIV_median'] * 100 
+#Inserting The Percentage OF Deaths Into The  cases_and_death Table
+cases_and_death['Percentage_Of_Deaths'] = cases_and_death['Death_Counts'] / cases_and_death['Estimated_number_of_people_living_with_HIV_median'] * 100
+#Rounding The Data To Two Decimal Places
+cases_and_death = cases_and_death.round(2)
+cases_and_death
+
+
+#Total Number Of People Living With HIV Per Region
+region = art_coverage_by_country_clean[['WHO_Region', 'Estimated_number_of_people_living_with_HIV_median']]
+#Grouping And Aggregating The Table
+HIV_per_region =  region.groupby('WHO_Region').agg({'Estimated_number_of_people_living_with_HIV_median' : ['sum']}).sort_values(by = ('Estimated_number_of_people_living_with_HIV_median','sum'), ascending = False).reset_index()
+HIV_per_region.columns = {f'{col[0]}_{col[1]}' if col[1] else col[0] for col in HIV_per_region.columns}
+HIV_per_region = HIV_per_region.rename(columns = {'Estimated_number_of_people_living_with_HIV_median_sum' : 'Total_Number_Of_People_Living_With_HIV'})
+HIV_per_region 
+
+
+
+#Total Number Of People Living With HIV, Received ART, Deaths With Percentage
+region_HIV = art_coverage_by_country_clean[['WHO_Region',
+                                            'Country',
+                                           'Estimated_number_of_people_living_with_HIV_median',
+                                           'Reported_number_of_people_receiving_ART']]
+region_HIV =region_HIV.rename(columns = {'Estimated_number_of_people_living_with_HIV_median' : 'people_living_with_HIV', 
+                                         'Reported_number_of_people_receiving_ART' : 'people_received_ART'})
+HIV_And_ART = pd.merge(region_HIV,average_deaths, on = ['Country'], how = 'inner')
+#Chaning The Data Type To Float
+HIV_And_ART['people_received_ART'] = HIV_And_ART['people_received_ART'].astype(float)
+#Grouping And Aggregating The Data
+living_with_HIV = HIV_And_ART.groupby('Country').agg({'people_living_with_HIV' : ['sum'],
+                                                         'people_received_ART' : ['sum'],
+                                                         'Death_Counts' : ['sum']}).reset_index()
+#Removing The Multi Index 
+living_with_HIV.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in living_with_HIV.columns]
+#Renaming The Columns
+living_with_HIV = living_with_HIV.rename(columns = {'people_living_with_HIV_sum' : 'people_living_with_HIV',
+                                                    'people_received_ART_sum' : 'people_received_ART',
+                                                    'Death_Counts_sum' : 'death_counts' })
+#Inserting The Percentage Of People Received ART
+living_with_HIV['percentage_people_received'] = living_with_HIV['people_received_ART'] / living_with_HIV['people_living_with_HIV'] *100
+#Inserting The Percentage Of People Died
+living_with_HIV['percentage_of_people_died'] = living_with_HIV['death_counts'] / living_with_HIV['people_living_with_HIV'] *100
+#Sorting The Data
+living_with_HIV = living_with_HIV.sort_values(by =['Country'], ascending = True).round(2)
+living_with_HIV
+
+
+#Top 5 Highest Country With People Living With HIV
+#Filtering The Data
+top_5_living_hiv = people_living_with_hiv[people_living_with_hiv['Year'] == 2018]
+
+top_5_living_hiv = top_5_living_hiv[['Country', 
+                                     'WHO_Region', 
+                                     'Count_median']].sort_values(by = ['Count_median'], ascending = False).nlargest(5,'Count_median')
+#Renaming The Column Names
+top_5_living_hiv = top_5_living_hiv.rename(columns = {'Count_median' : 'Number of People with HIV'})
+top_5_living_hiv
+
+
+#TOP 5 Highest Deaths Per Country
+#Filter The Data
+top_5_death = deaths_by_country[deaths_by_country['Year'] == 2018]
+#Removing The Unnecessary Column
+top_5_death = top_5_death [['Country',
+                                  'WHO_Region',
+                                  'Count_median']].sort_values(by = ['Count_median'], ascending = False).nlargest(5,'Count_median')
+#Renaming The Column Names
+top_5_death = top_5_death.rename(columns = {'Count_median' : 'Number of Death'})
+top_5_death
+
+
+#Total Deaths Per Year
+deahts_per_year = deaths_by_country[['Year', 'Count_median']].groupby(['Year']).agg({'Count_median' : ['sum']})
+#Renaming The Column Names
+deahts_per_year = deahts_per_year.rename(columns = {'Count_median' : 'deaths'}).reset_index()
+#Removing The Multi Index
+deahts_per_year.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in deahts_per_year.columns]
+deahts_per_year
+
+
+#People Living with HIV, Percentage with ART and Percentage Died with HIV In The World
+#Sum of People Living With HIV
+people_living_with_HIV = HIV_And_ART['people_living_with_HIV'].sum() 
+#Sum of Peolple Receiving ART
+people_received_ART = HIV_And_ART['people_received_ART'].sum() 
+# Percentage Of People Who Received ART
+percentage_with_ART = people_received_ART / people_living_with_HIV *100 
+#Sum Of The Deaths
+count_death = average_deaths['Death_Counts'].sum() 
+# Percentage Of Death
+death_percentage = count_death / people_living_with_HIV*100 
+#Making Data Frame
+table_summary = pd.DataFrame({ 'People Living With HIV' : [people_living_with_HIV], 'Percentage_With_ART' : [percentage_with_ART], 'Death_Percentage' : [death_percentage]})
+table_summary
+
+
+#Visualization
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+
+#Highest Cases Of HIV Per Country(Bar Chart)
+#Filtering The Data
+top_10_highest_cases = cases_and_death .nlargest(10,'Estimated_number_of_people_living_with_HIV_median')
+# Normalize for colormap
+norm = plt.Normalize(top_10_highest_cases['Estimated_number_of_people_living_with_HIV_median'].min(), 
+                     top_10_highest_cases['Estimated_number_of_people_living_with_HIV_median'].max())
+# Choose a colormap 
+colors = cm.YlOrRd(norm(top_10_highest_cases['Estimated_number_of_people_living_with_HIV_median']))
+#Creating The Bar Chart
+plt.bar(top_10_highest_cases['Country'], top_10_highest_cases['Estimated_number_of_people_living_with_HIV_median'], color = colors)
+plt.title('Highest Cases Of HIV Per Country')
+plt.xlabel('Country')
+plt.ylabel('Total Deaths')
+plt.xticks(rotation = 50, fontsize = 8)
+plt.tight_layout()
+#Adding The Value And Place It On Top 
+for i, value in enumerate(top_10_highest_cases['Estimated_number_of_people_living_with_HIV_median']):
+    plt.text(i, value + (value*0.01), f'{int(value):,}', ha = 'center', va = 'bottom', fontsize =6)
+
+
+
+#Country With The Highest ART Received(Bar Chart) 
+#Filtering The Data
+top_5_ART = cases_and_death.nlargest(5,'Reported_number_of_people_receiving_ART')
+# Normalize for colormap
+norm = plt.Normalize(top_5_ART['Reported_number_of_people_receiving_ART'].min(), 
+                     top_5_ART['Reported_number_of_people_receiving_ART'].max())
+# Choose a colormap 
+colors = cm.YlOrRd(norm(top_5_ART['Reported_number_of_people_receiving_ART']))
+#Creating The  Bar Chart
+plt.bar(top_5_ART['Country'], top_5_ART['Reported_number_of_people_receiving_ART'], color = colors)
+plt.title('Country With The Highest ART Received And Used')
+plt.xlabel('Country')
+plt.ylabel('People Received ART')
+plt.tight_layout()
+plt.xticks(rotation = 45)
+#Adding The Value And Place It On Top 
+for i, value in enumerate(top_5_ART['Reported_number_of_people_receiving_ART']):
+    plt.text(i, value + (value*0.01), f'{int(value):,}', ha = 'center', va = 'bottom', fontsize =8)
+
+
+
+#Highest Death Per Country(Bar Chart) 
+# Normalize for colormap
+norm = plt.Normalize(top_5_death['Number of Death'].min(), 
+                     top_5_death['Number of Death'].max())
+# Choose a colormap 
+colors = cm.YlOrRd(norm( top_5_death['Number of Death']))
+#Creating The Bar Chart
+plt.bar(top_5_death['Country'], top_5_death['Number of Death'], color = colors)
+plt.title('Highest Death Per Country')
+plt.xlabel('Country')
+plt.ylabel('Death Count')
+plt.tight_layout()
+plt.xticks(rotation = 45)
+#Adding The Value And Place It On Top 
+for i, value in enumerate(top_5_death['Number of Death']):
+    plt.text(i, value + (value*0.01), f'{int(value):,}', ha = 'center', va = 'bottom', fontsize = 8)
+
+
+#Relationship Betwwen HIV Cases And Death(Scatter Plot)
+#Creating The Scatter Plot
+sns.lmplot(
+    data = cases_and_death,
+    x = 'Death_Counts',
+    y = 'Estimated_number_of_people_living_with_HIV_median',
+    height = 6,
+    aspect = 1.5,
+    line_kws = {'color' : 'red'} )
+#Assigning The x,y And Title
+plt.xlabel('Death Couts')
+plt.ylabel('People Living With HIV')
+plt.title('Relationship Betwwen HIV Cases And Death')
+plt.grid(True)
+
+
+#Relationship Betwwen HIV Cases And People With ART(Scatter Plot)
+sns.lmplot(
+    data = cases_and_death,
+    x = 'Reported_number_of_people_receiving_ART',
+    y = 'Estimated_number_of_people_living_with_HIV_median',
+    height = 6,
+    aspect = 1.5,
+    line_kws = {'color' : 'red'} )
+#Assigning The x,y And Title
+plt.xlabel('People Received ART')
+plt.ylabel('People Living With HIV')
+plt.title('Relationship Betwwen HIV Cases And People Received ART')
+plt.grid(True)
+    
+
+#Relationship Between People With ART And Death(Scatter Plot)
+sns.lmplot(
+    data = cases_and_death,
+    x = 'Reported_number_of_people_receiving_ART',
+    y = 'Death_Counts',
+    height = 6,
+    aspect = 1.5,
+    line_kws = {'color' : 'red'} )
+#Assigning The x,y And Title
+plt.xlabel('People Received ART')
+plt.ylabel('Death Counts')
+plt.title('Relationship Between People With ART And Death')
+plt.grid(True)
+
+
+
+#Top 5 Highest Cases Through The Years(Area Graph)
+#Filter The Data
+top_5_countries = ['South Africa', 'Mozambique', 'Nigeria', 'Kenya', 'United Republic of Tanzania']
+top_5 = people_living_with_hiv[people_living_with_hiv['Country'].isin(top_5_countries)]
+#Removing The Unncessary Columns
+top_5 = top_5[['Country','Year','Count_median']].sort_values(['Country','Year'], ascending = [False,False])
+area_data = top_5.pivot(index='Year', columns='Country', values='Count_median')
+#Creating The Area Plot
+area_data.plot(kind = 'area', stacked = True, alpha = 0.6,figsize=(10, 6))
+plt.title('Top 5 Highest Cases Through The Years')
+plt.xlabel('Year')
+plt.ylabel('Count_median')
+plt.grid(True)
+plt.tight_layout()
+# Annotating the data
+# We'll iterate through each year (x) and stack the heights (y) for annotation
+for year in area_data.index:
+    cumulative = 0
+    for country in area_data.columns:
+        value = area_data.loc[year, country]
+        if not pd.isna(value) and value > 0:
+            cumulative += value
+            plt.text(
+                year,                 # x position
+                cumulative - value / 2,  # center of the current stack
+                f'{int(value):,}',   # formatted label
+                ha='center', va='center',
+                fontsize=6, alpha=0.7
+            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
