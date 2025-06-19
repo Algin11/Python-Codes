@@ -67,8 +67,8 @@ Table_for_Cases
 #Countries With The Highest Infection Rate
 #Creating Table For Infection Rate
 Infection_Rate = Covid_Death[['location',
-                                  'population',
-                                  'total_cases']].groupby(['location','population']).agg({'total_cases':['max']}).reset_index()
+                              'population',
+                              'total_cases']].groupby(['location','population']).agg({'total_cases':['max']}).reset_index()
 # Separating The Multi Index To Create New Column
 Infection_Rate.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in Infection_Rate.columns] 
 #Creating For The Infection Rate 
@@ -95,7 +95,7 @@ Highest_Cases
 
 #Countries With The Highest Death Count
 Highest_Death_Count = Covid_Death[['location',
-                                     'total_deaths']].groupby(['location']).agg({'total_deaths' : ['max']}).sort_values(by = ('total_deaths','max'), ascending = False).reset_index()
+                                    'total_deaths']].groupby(['location']).agg({'total_deaths' : ['max']}).sort_values(by = ('total_deaths','max'), ascending = False).reset_index()
 #Removing The Multi Index 
 Highest_Death_Count.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in Highest_Death_Count.columns]
 Highest_Death_Count
