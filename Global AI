@@ -1,0 +1,345 @@
+#Importing The Pandas
+import pandas as pd
+
+#Importing The Data Set
+AI = pd.read_csv(r"D:Data Analyst/Data analyst/PROJECTS/Global AI/Global_AI_Content_Impact_Dataset.csv")
+
+#Setting The Max Rows And Columns 
+pd.set_option("display.max.columns", 200)
+pd.set_option("display.max.rows", 200)
+
+#Checking For Duplicates
+AI.duplicated().sum()
+
+#Checking For Nulls
+AI.isnull().sum()
+
+#Data Manipulation
+#Highest AI Generated Volume every Year
+#Create A Table From the Imported Data
+volume_generated = AI[['Country','Year','AI-Generated_Content_Volume_(TBs_per_year)', 'Top_AI_Tools_Used']]
+#Get The Maximum AI-Generated_Content_Volume_(TBs_per_year) Per Year
+max_volume_per_year = AI.groupby('Year')['AI-Generated_Content_Volume_(TBs_per_year)'].max().reset_index()
+#Merge The  Table max_volume_per_year To The Table volume_generated
+max_volume_per_year = volume_generated.merge(max_volume_per_year, on=['Year', 'AI-Generated_Content_Volume_(TBs_per_year)'],how='inner')
+#Sort By Year Descending
+max_volume_per_year =  max_volume_per_year.sort_values('Year', ascending = False)
+max_volume_per_year 
+
+
+#Average AI Generated Volume Per Year
+#The Average AI-Generated_Content_Volume 
+avg_volume_per_year = AI[['Country', 
+                          'AI-Generated_Content_Volume_(TBs_per_year)']].groupby(['Country']).agg({'AI-Generated_Content_Volume_(TBs_per_year)' : ['mean']})
+#Sorting The Values Into Decreasing
+avg_volume_per_year = avg_volume_per_year.sort_values(by = ('AI-Generated_Content_Volume_(TBs_per_year)','mean'), ascending = False).reset_index()
+#Removing The Multi Index
+avg_volume_per_year.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in avg_volume_per_year.columns]
+#Renaming The Coloumn
+avg_volume_per_year = avg_volume_per_year.rename(columns = {'AI-Generated_Content_Volume_(TBs_per_year)_mean' : 'AI-Generated_Content_Volume_(TBs_per_year)'})
+avg_volume_per_year 
+
+
+#The Most Used AI Every Year
+#First Group The AI by Year AND The Top_AI_Tools_Used
+AI_yearly = AI.groupby(['Year', 'Top_AI_Tools_Used']).size().reset_index(name = 'Count')
+# Applying The Rank over Each Year Partition (descending count)
+AI_yearly['ranking'] = AI_yearly.groupby('Year')['Count'].rank(method = 'min', ascending = False)
+#Rank The Values In The Table
+top_AI_used = AI_yearly[AI_yearly['ranking'] == 1]
+#Sort The Values In The Table
+top_AI_used = top_AI_used.sort_values(by = (['Year']),ascending = False)
+#Filter The Columns
+top_AI_used = top_AI_used[['Year','Top_AI_Tools_Used','Count']]
+top_AI_used
+
+
+#The most Used tool of AI from 2020 to 2025
+most_used_AI = AI.groupby('Top_AI_Tools_Used').size().reset_index(name = 'Count').sort_values(by = 'Count', ascending = False)
+
+
+#Revenue Increased per year
+revenue_increased_per_year = AI[['Country','Year',
+                                 'Revenue_Increase_Due_to_AI_(%)']].sort_values(by = ['Year', 'Revenue_Increase_Due_to_AI_(%)'], ascending = [False, False])
+
+
+#Highest Market ShareHolder per year Based On Industry
+#First Get The Market_Share_of_AI_Companies_(%) Per Year
+max_market_share = AI.groupby('Year')['Market_Share_of_AI_Companies_(%)'].max().reset_index()
+#Merge The Table
+market_share = pd.merge(AI,max_market_share, on = ['Year', 'Market_Share_of_AI_Companies_(%)'], how ='inner')
+#Filter The Table
+market_share = market_share [['Year',
+                              'Top_AI_Tools_Used',
+                              'Market_Share_of_AI_Companies_(%)',
+                              'Country']].sort_values( by = 'Year', ascending = False)
+market_share
+
+
+#Average Job loss Per Year due to AI
+job_loss_per_year = AI[['Year', 
+                        'Job_Loss_Due_to_AI_(%)']].groupby(['Year']).agg({'Job_Loss_Due_to_AI_(%)' : ['mean']}).sort_values(by = ('Year'), ascending = True).reset_index()
+#Removing The Multi Index
+job_loss_per_year.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in job_loss_per_year.columns]
+#Round To Two Decimal Places
+job_loss_per_year = job_loss_per_year.round(2)
+job_loss_per_year
+
+
+#Industry With the Highest Jobloss from 2020 to 2025 due to AI
+industry_job_loss =  AI[['Industry',
+                         'Job_Loss_Due_to_AI_(%)']].groupby(['Industry']).agg({'Job_Loss_Due_to_AI_(%)' : ['mean']}).reset_index()
+#Removing The Multi Index
+industry_job_loss.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in industry_job_loss.columns]
+#Ordering The Data
+industry_job_loss = industry_job_loss.sort_values(by = ['Job_Loss_Due_to_AI_(%)_mean'], ascending = False)
+industry_job_loss
+
+
+#AI Adoption Rate per year
+adoption_per_year = AI[['Year', 'Country', 'AI_Adoption_Rate_(%)']].sort_values(by = ['Year', 'AI_Adoption_Rate_(%)'], ascending = False)
+
+
+#Countries AI adoption rate from 2020 to 2025
+adoption_rate = AI[['Country', 'AI_Adoption_Rate_(%)']].groupby(['Country']).agg({'AI_Adoption_Rate_(%)' : ['mean']}).reset_index()
+#Removing The Multi Index
+adoption_rate.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in adoption_rate.columns]
+#Ordering The Data
+adoption_rate = adoption_rate.sort_values(by = ['AI_Adoption_Rate_(%)_mean'], ascending = False).round(2)
+adoption_rate
+
+
+#Human AI Collaboration based on Industry from 2020 to 2025
+industry_AI_collaboration_industry = AI[['Industry', 'Human-AI_Collaboration_Rate_(%)']].groupby(['Industry']).agg({'Human-AI_Collaboration_Rate_(%)' : ['mean']}).reset_index()
+#Removing The Multi Index
+industry_AI_collaboration_industry.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in industry_AI_collaboration_industry.columns]
+#Ordering The Data
+industry_AI_collaboration_industry = industry_AI_collaboration_industry.sort_values(by = ['Human-AI_Collaboration_Rate_(%)_mean'], ascending = False).round(2)
+industry_AI_collaboration_industry 
+
+
+#Human AI Collaboration based on Country from 2020 to 2025
+country_AI_collaboration_Country = AI[['Country', 'Human-AI_Collaboration_Rate_(%)']].groupby(['Country']).agg({'Human-AI_Collaboration_Rate_(%)' : ['mean']}).reset_index()
+#Removing The Multi Index
+country_AI_collaboration_Country.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in country_AI_collaboration_Country.columns]
+#Ordering The Data
+country_AI_collaboration_Country = country_AI_collaboration_Country.sort_values(by = ['Human-AI_Collaboration_Rate_(%)_mean'], ascending = False).round(2)
+country_AI_collaboration_Country
+
+
+#Average Human AI Collaboration Per Year
+human_AI_collaboration_yearly = AI[['Year', 'Human-AI_Collaboration_Rate_(%)']].groupby(['Year']).agg({'Human-AI_Collaboration_Rate_(%)' : ['mean']}).reset_index()
+#Removing The Multi Index
+human_AI_collaboration_yearly.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in human_AI_collaboration_yearly.columns]
+#Ordering The Data
+human_AI_collaboration_yearly = human_AI_collaboration_yearly.sort_values(by = ['Human-AI_Collaboration_Rate_(%)_mean'], ascending = False).round(2)
+human_AI_collaboration_yearly
+
+
+#Industries with Consumer Trust in AI from 2020 to 2025
+consumer_trust_in_industries = AI[['Industry', 'Consumer_Trust_in_AI_(%)']].groupby(['Industry']).agg({'Consumer_Trust_in_AI_(%)' : ['mean']}).reset_index()
+#Removing The Multi Index
+consumer_trust_in_industries.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in consumer_trust_in_industries.columns]
+#Ordering The Data
+consumer_trust_in_industries = consumer_trust_in_industries.sort_values(by = ['Consumer_Trust_in_AI_(%)_mean'], ascending = False).round(2)
+consumer_trust_in_industries
+
+
+#Consumer Trust in AI from 2020 to 2025
+consumer_trust_in_AI = AI[['Year', 'Consumer_Trust_in_AI_(%)']].groupby(['Year']).agg({'Consumer_Trust_in_AI_(%)' : ['mean']}).reset_index()
+#Removing The Multi Index
+consumer_trust_in_AI.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in consumer_trust_in_AI.columns]
+#Ordering The Data
+consumer_trust_in_AI = consumer_trust_in_AI.sort_values(by = ['Year'], ascending = True).round(2)
+#consumer_trust_in_AI
+
+
+#Countires Consumer Trust
+countries_consumer_trust = AI[['Country', 'Consumer_Trust_in_AI_(%)']].groupby(['Country']).agg({'Consumer_Trust_in_AI_(%)' : ['mean']}).reset_index()
+#Removing The Multi Index
+countries_consumer_trust.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in countries_consumer_trust.columns]
+#Ordering The Data
+countries_consumer_trust = countries_consumer_trust.sort_values(by = ['Consumer_Trust_in_AI_(%)_mean'], ascending = False).round(2)
+countries_consumer_trust
+
+
+#Highest Market Share Holder Per Year
+#Getting The Maximum Market Share of AI Companies
+max_share_per_year = (
+    AI.groupby('Year')['Market_Share_of_AI_Companies_(%)']
+    .transform('max')
+)
+#Creating New Table That Will Equal To The Table In max_share_per_year Values Of The Highest Market Share
+Highest_market_share = AI[AI['Market_Share_of_AI_Companies_(%)'] == max_share_per_year]
+#Filtering The Columns
+Highest_market_share = Highest_market_share[['Year','Top_AI_Tools_Used','Market_Share_of_AI_Companies_(%)','Country']].sort_values(by = ['Year'], ascending = True)
+Highest_market_share
+
+
+#Visualization
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+
+#The Most AI Used In 2024
+plt.figure(figsize = (8,6))
+plt.scatter(x =range(len(most_used_AI['Top_AI_Tools_Used'])) , y = [1]*len(most_used_AI['Top_AI_Tools_Used']), s =[p*40 for p in most_used_AI['Count']], alpha = 0.5)
+# Add labels
+for i, lang in enumerate(most_used_AI['Top_AI_Tools_Used']):
+    plt.text(i, 1, lang, ha='center', va='center')
+#Creating The Labels
+plt.axis('off')
+plt.title('The Most AI Used In 2024')
+plt.show()
+
+
+
+#Job Loss In The Industries Caused By AI(Bar Graph)
+#Creating A Dictionary For List Of Colors
+industry = {
+    'Manufacturing': 'red',
+    'Automotive': 'navy',
+    'Legal': 'green',
+    'Finance': 'orange',
+    'Gaming': 'purple',
+    'Education': 'cyan',
+    'Healthcare' : 'pink',
+    'Media' : 'blue',
+    'Retail' : 'brown',
+    'Marketing' : 'gray'
+    
+                    }
+colors = industry_job_loss['Industry'].apply(lambda x: industry.get(x, 'gray'))
+#Creating The Bar Graph And The Labels
+plt.bar(industry_job_loss['Industry'],industry_job_loss['Job_Loss_Due_to_AI_(%)_mean'], color = colors  )
+plt.xlabel('Industry')
+plt.ylabel('Job Loss')
+plt.title('Job Loss In The Industries Caused By AI')
+plt.xticks(rotation=45, fontsize =9 )  # Optional: rotates labels
+plt.tight_layout()
+#Adding The Value And Place It On Top 
+for i, value in enumerate(industry_job_loss['Job_Loss_Due_to_AI_(%)_mean']):
+    plt.text(i, value + (value * 0.01), f'{value:.2f}%', ha='center', va='bottom', fontsize=8)     
+
+
+
+# AI Counsumer Trust Per Country(Bar Graph)
+# Normalize for colormap
+norm = plt.Normalize(countries_consumer_trust['Consumer_Trust_in_AI_(%)_mean'].min(), 
+                     countries_consumer_trust['Consumer_Trust_in_AI_(%)_mean'].max())
+# Choose a colormap 
+colors = cm.YlOrRd(norm(countries_consumer_trust['Consumer_Trust_in_AI_(%)_mean']))
+#Creating The Bar Graph And The Labels
+plt.bar(countries_consumer_trust['Country'],countries_consumer_trust['Consumer_Trust_in_AI_(%)_mean'], color = colors )
+plt.xlabel('Country')
+plt.ylabel('Percentage Job Loss')
+plt.title('AI Counsumer Trust Per Country')
+plt.xticks(rotation=45, fontsize =9 )  # Optional: rotates labels
+plt.tight_layout()
+#Adding The Value And Place It On Top 
+for i, value in enumerate(countries_consumer_trust['Consumer_Trust_in_AI_(%)_mean']):
+    plt.text(i, value + (value * 0.01), f'{value:.2f}%', ha='center', va='bottom', fontsize=8)
+
+
+
+#AI Adoptation Rate Per Country(Bar Graph)
+# Normalize for colormap
+norm = plt.Normalize(adoption_rate['AI_Adoption_Rate_(%)_mean'].min(), 
+                     adoption_rate['AI_Adoption_Rate_(%)_mean'].max())
+# Choose a colormap 
+colors = cm.YlOrRd(norm(adoption_rate['AI_Adoption_Rate_(%)_mean']))
+#Creating The Bar Graph And The Labels
+plt.bar(adoption_rate['Country'],adoption_rate['AI_Adoption_Rate_(%)_mean'], color = colors )
+plt.xlabel('Country')
+plt.ylabel('AI Adoptation Rate')
+plt.title('AI Adoptation Rate Per Country')
+plt.xticks(rotation=45, fontsize =9 )  # Optional: rotates labels
+plt.tight_layout()
+#Adding The Value And Place It On Top 
+for i, value in enumerate(adoption_rate['AI_Adoption_Rate_(%)_mean']):
+    plt.text(i, value + (value * 0.01), f'{value:.2f}%', ha='center', va='bottom', fontsize=8)
+
+
+
+#The Highest Market Share Holder Per Year(Bar Graph)
+AI = {
+    'Midjourney': 'red',
+    'ChatGPT': 'navy',
+    'Claude': 'green',
+    'Stable Diffusion': 'orange',
+    'DALL-E': 'purple',
+    'Bard': 'cyan',
+    'Synthesia': 'pink'
+}
+# Get colors
+colors = Highest_market_share['Top_AI_Tools_Used'].apply(lambda x: AI.get(x, 'gray'))
+# Bar plot
+plt.bar(
+    Highest_market_share['Year'],
+    Highest_market_share['Market_Share_of_AI_Companies_(%)'],
+    color=colors
+)
+# Correct placement using Year (not tool name)
+for x, y, tool in zip(
+    Highest_market_share['Year'],
+    Highest_market_share['Market_Share_of_AI_Companies_(%)'],
+    Highest_market_share['Top_AI_Tools_Used'],
+):
+    plt.text(x, y + 1, f'{y:.1f}%\n{tool}', ha='center', va='bottom', fontsize=8)
+# Labels and settings
+plt.xlabel('Year')
+plt.ylabel('Market Share of AI Companies (%)')
+plt.ylim(0, 100)
+plt.title('Highest Market Share Holder Per Year')
+plt.xticks(rotation=45, fontsize=9)
+plt.tight_layout()
+plt.show()
+
+
+
+#Yearly Percent Worked Lost Due To AI(Line Graph)
+#Create Line Plot
+plt.plot(job_loss_per_year['Year'],job_loss_per_year['Job_Loss_Due_to_AI_(%)_mean'], label='Job Loss Due to AI', color='green')
+# Correct placement using Year 
+for x, y in zip(job_loss_per_year['Year'], job_loss_per_year['Job_Loss_Due_to_AI_(%)_mean']):
+    plt.text(x, y + 0.5, f'{y:.1f}%', ha='center', va='bottom', fontsize=8)
+# Labels and title
+plt.xlabel('Year')
+plt.ylabel('Job Loss Due to AI')
+plt.ylim(0,100)
+plt.title('Yearly Percent Worked Lost Due To AI')
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+
+
+
+#Consumer's Trust On AI Every Year(Line Graph)
+#Create Line Plot
+plt.plot(consumer_trust_in_AI['Year'],consumer_trust_in_AI['Consumer_Trust_in_AI_(%)_mean'], label='Consumer Trust In AI', color='green')
+# Correct placement using Year 
+for x, y in zip(consumer_trust_in_AI['Year'], consumer_trust_in_AI['Consumer_Trust_in_AI_(%)_mean']):
+    plt.text(x, y + 0.5, f'{y:.1f}%', ha='center', va='bottom', fontsize=8)
+# Labels and title
+plt.xlabel('Year')
+plt.ylabel('Consumer Trust in AI')
+plt.ylim(0,100)
+plt.title("Consumer's Trust On AI Every Year")
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
