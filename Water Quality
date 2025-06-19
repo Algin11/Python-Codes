@@ -1,0 +1,439 @@
+import pandas as pd
+pd.options.mode.copy_on_write = True 
+
+#Importing The Data
+water_pollution = pd.read_csv(r"D:\Data Analyst\Data analyst\PROJECTS\Water Polution\water_pollution_disease.csv")
+
+pd.set_option('display.max.rows', 3126)
+pd.set_option('display.max.columns', 3126)
+
+
+#Checking For The Duplicates
+water_pollution.duplicated().sum()
+
+
+#Checking For Null
+water_pollution.isnull().sum()
+
+
+#Replacing The NAN With None
+water_pollution['Water_Treatment_Method'] = water_pollution['Water_Treatment_Method'].fillna('None')
+
+
+#Data Manipullation
+#Highest Contamination Level Per Country
+highest_contamination = water_pollution[['Country',
+                                         'Region',
+                                         'Water_Source_Type',
+                                         'Contaminant_Level_(ppm)']].sort_values(by = ['Contaminant_Level_(ppm)'], ascending = False)
+highest_contamination 
+
+
+#Highest Contamination Level Based on Water Source
+contamination_water_source = water_pollution[['Water_Source_Type',
+                                              'Contaminant_Level_(ppm)']].groupby(['Water_Source_Type']).agg({'Contaminant_Level_(ppm)' : ['max']}).reset_index().sort_values( by = ('Contaminant_Level_(ppm)','max'), ascending = False)
+#Removing The Multi Index
+contamination_water_source.columns = [ f' {col[0]}_{col[1]} ' if col[1] else col[0] for col in contamination_water_source.columns]
+#contamination_water_source
+
+
+#Highest Diarrhea cases per 100,000 people In A Country Per Year
+cases_country = water_pollution[['Country',
+                                 'Year',
+                                 'Water_Source_Type',
+                                 'Diarrheal_Cases_per_100,000_people']]  
+#Grouping And Aggregating The Data
+max_diarrhea_cases = water_pollution.groupby('Year')['Diarrheal_Cases_per_100,000_people'].max().reset_index()
+#Merging The Data
+diarrhea_cases = pd.merge(cases_country,max_diarrhea_cases, on =  ['Year',
+                                                                   'Diarrheal_Cases_per_100,000_people'], how = 'inner')
+#Sorting Values
+diarrhea_cases = diarrhea_cases.sort_values(by = ['Year',
+                                                  'Diarrheal_Cases_per_100,000_people'], ascending = False)
+# Alternative Code
+cases_country['rnk'] = water_pollution.groupby('Year')['Diarrheal_Cases_per_100,000_people'].rank(method='min', ascending=False)
+top_cases = cases_country[cases_country['rnk'] == 1 ]
+result = top_cases[['Country',
+                    'Year', 
+                    'Water_Source_Type',
+                    'Diarrheal_Cases_per_100,000_people']].sort_values(by='Year', ascending=False)
+result
+
+
+#Highest Cholera  Cases Per 100,000 People Per Year
+cholera_cases = water_pollution[['Country',
+                                 'Year',
+                                 'Water_Source_Type',
+                                 'Cholera_Cases_per_100,000_people']]
+#Grouping And Aggregating The Data
+max_cholera_cases = cholera_cases.groupby('Year')['Cholera_Cases_per_100,000_people'].max().reset_index()
+#Merging The Data
+table_cholera_cases = pd.merge(cholera_cases,max_cholera_cases, on = ['Year',
+                                                                      'Cholera_Cases_per_100,000_people'], how = 'inner')  
+#Sorting Values
+table_cholera_cases = table_cholera_cases.sort_values(by = ['Year',
+                                                            'Cholera_Cases_per_100,000_people'], ascending = False)
+table_cholera_cases
+
+
+#Highest Typoid Cases Per 100,000 People Year
+typoid_cases = water_pollution[['Country','Year','Water_Source_Type','Typhoid_Cases_per_100,000_people']]
+#Grouping And Aggregating The Data
+max_typoid_cases = typoid_cases.groupby('Year')['Typhoid_Cases_per_100,000_people'].max().reset_index()
+#Merging The Data
+table_typoid_cases = pd.merge(typoid_cases,max_typoid_cases, on = ['Year','Typhoid_Cases_per_100,000_people'], how = 'inner').sort_values(by = ['Year'], ascending = False)
+table_typoid_cases
+
+
+#Checking For The Water Quality 
+#Creating Table For Water Quality
+water_quality = water_pollution[['Country','Region','Year','Water_Source_Type','Contaminant_Level_(ppm)','pH_Level','Turbidity_(NTU)','Dissolved_Oxygen_(mg/L)','Nitrate_Level_(mg/L)','Lead_Concentration_(µg/L)','Bacteria_Count_(CFU/mL)']]
+#Creating The Conditions
+conditions = (  (water_quality['Contaminant_Level_(ppm)'] < 500) &
+                (water_quality['pH_Level'] >= 6.5) & (water_pollution['pH_Level'] <= 8) &
+                (water_quality['Turbidity_(NTU)'] < 5)  &
+                (water_quality['Dissolved_Oxygen_(mg/L)'] >= 6.5) & (water_pollution['Dissolved_Oxygen_(mg/L)'] <= 8) &
+                (water_quality['Nitrate_Level_(mg/L)'] < 10 ) &
+                (water_quality['Lead_Concentration_(µg/L)'] < 15) & 
+                (water_quality['Bacteria_Count_(CFU/mL)'] < 100) 
+             )
+#Applying The Conditions 
+water_quality['Water Quality'] = water_pollution.apply(lambda row: 'Drinkable Water' if conditions.loc[row.name] else 'Not Drinkable Water', axis = 1)
+#Sorting Values
+water_quality = water_quality.sort_values(by = ['Year', 'Country','Region'] , ascending = [False ,True, True])
+water_quality 
+
+
+#Mortality Rate Of Infant Caused By High Nitrate Level
+#Creating The Table For Mortality Rate
+mortality_rate_infant = water_pollution[['Country',
+                                         'Region',
+                                         'Year',
+                                         'Water_Source_Type',
+                                         'Typhoid_Cases_per_100,000_people',
+                                         'Access_to_Clean_Water_(%_of_Population)',
+                                         'Water_Source_Type',
+                                         'Nitrate_Level_(mg/L)']] 
+#Creating The Conditions
+condition1 =  (water_pollution['Nitrate_Level_(mg/L)'] < 10) 
+#Applying The Conditions        
+mortality_rate_infant['Water Quality'] = water_pollution.apply(lambda row: 'Safe for Infants' if condition1.loc[row.name] else 'Not Safe for Infants', axis = 1 )
+#Sorting Values
+mortality_rate_infant = mortality_rate_infant.sort_values(by = ['Year', 'Country','Region'] , ascending = [False ,True,True])
+mortality_rate_infant 
+
+
+#Dangerous Water Source Type From  2000 To 2024
+#Creating The Table For Water Source Mean
+water_source_mean =  water_pollution[['Water_Source_Type',
+                                      'Contaminant_Level_(ppm)',
+                                      'pH_Level','Turbidity_(NTU)',
+                                      'Dissolved_Oxygen_(mg/L)',
+                                      'Nitrate_Level_(mg/L)',
+                                      'Lead_Concentration_(µg/L)',
+                                      'Bacteria_Count_(CFU/mL)']].groupby(['Water_Source_Type']).agg({'Contaminant_Level_(ppm)' : ['mean'],
+                                                                                                      'pH_Level' :  ['mean'],
+                                                                                                      'Turbidity_(NTU)' :  ['mean'],
+                                                                                                      'Dissolved_Oxygen_(mg/L)' :  ['mean'],
+                                                                                                      'Nitrate_Level_(mg/L)' : ['mean'],
+                                                                                                      'Lead_Concentration_(µg/L)' : ['mean'],
+                                                                                                      'Bacteria_Count_(CFU/mL)' : ['mean'] }).reset_index()
+#Creating The Conditions
+case_1 = water_source_mean['Contaminant_Level_(ppm)'] < 500
+case_2 = (water_source_mean['pH_Level'] < 8) & (water_source_mean['pH_Level'] > 6.5)
+case_3 = water_source_mean['Turbidity_(NTU)'] < 5
+case_4 = (water_source_mean['Dissolved_Oxygen_(mg/L)'] > 6.5) & (water_source_mean['Dissolved_Oxygen_(mg/L)'] < 8)
+case_5 = water_source_mean['Nitrate_Level_(mg/L)'] < 10 
+case_6 = water_source_mean['Lead_Concentration_(µg/L)'] < 15
+case_7 = water_source_mean['Bacteria_Count_(CFU/mL)'] < 100 
+#Applying The Conditions 
+water_source_mean['contaminant_level_reading']        = case_1.map(lambda x: 'Contaminant Level Is Safe' if x else 'Contaminant Level Is Not Safe')
+water_source_mean['pH_level_reading']                 = case_2.map(lambda x: 'pH Level Is Safe' if x else 'pH Level Is Not Safe')
+water_source_mean['turbidity_level_reading']          = case_3.map(lambda x: 'Turbidty Level Is Safe' if x else 'Turbidty Level Is Not Safe')
+water_source_mean['dissolved_oxygen_level_reading']   = case_4.map(lambda x: 'Dissolved Oxygen Level Is Safe' if x else 'Dissolved Oxygen Level Is Not Safe')
+water_source_mean['nitrate_level_reading']            = case_5.map(lambda x: 'Nitrate Level Is Safe' if x else 'Nitrate Level Is Not Safe')
+water_source_mean['lead_concentration_level_reading'] = case_6.map(lambda x: 'Lead Concentration Level Is Safe' if x else 'Lead Concentration Level Is Not Safe' )
+water_source_mean['bacteria_level_reading']           = case_7.map(lambda x: 'Bacteria Level Is Safe' if x else 'Bacteria Level Is Not Safe')
+#Rearranging The Table
+water_source_mean = water_source_mean[['Water_Source_Type',
+                                       'Contaminant_Level_(ppm)',
+                                       'contaminant_level_reading',
+                                       'pH_Level','pH_level_reading',
+                                       'Turbidity_(NTU)','turbidity_level_reading',
+                                       'Dissolved_Oxygen_(mg/L)',
+                                       'dissolved_oxygen_level_reading',
+                                       'Nitrate_Level_(mg/L)',
+                                       'nitrate_level_reading',
+                                       'Lead_Concentration_(µg/L)',
+                                       'lead_concentration_level_reading',
+                                       'Bacteria_Count_(CFU/mL)',
+                                       'bacteria_level_reading']].round(2)
+#Removing The Multi Index 
+water_source_mean.columns = [ f'{col[0]}_{col[1]}' if col[1] else col[0] for col in water_source_mean.columns]
+water_source_mean
+
+
+
+#Water Treatment Method From 2000 to 2024
+#Creating The Table For water_treatment_methodA
+water_treatment_methodA = water_pollution[['Water_Treatment_Method',
+                                          'Diarrheal_Cases_per_100,000_people',
+                                          'Cholera_Cases_per_100,000_people',
+                                          'Typhoid_Cases_per_100,000_people',
+                                          'Infant_Mortality_Rate_(per_1,000_live_births)',
+                                          'Contaminant_Level_(ppm)',
+                                          'pH_Level',
+                                          'Turbidity_(NTU)',
+                                          'Dissolved_Oxygen_(mg/L)',
+                                          'Nitrate_Level_(mg/L)',
+                                          'Lead_Concentration_(µg/L)',
+                                          'Bacteria_Count_(CFU/mL)']]   
+
+#Creating The Table For water_treatment_methodB
+water_treatment_methodB = water_treatment_methodA.groupby(['Water_Treatment_Method']).agg({'Diarrheal_Cases_per_100,000_people' : ['mean'],
+                                                                                         'Cholera_Cases_per_100,000_people' : ['mean'],
+                                                                                         'Typhoid_Cases_per_100,000_people' : ['mean'],
+                                                                                         'Infant_Mortality_Rate_(per_1,000_live_births)' : ['mean'],
+                                                                                         'Contaminant_Level_(ppm)' : ['mean'],
+                                                                                         'pH_Level' : ['mean'],
+                                                                                         'Turbidity_(NTU)' : ['mean'],
+                                                                                         'Dissolved_Oxygen_(mg/L)' :['mean'],
+                                                                                         'Nitrate_Level_(mg/L)' : ['mean'],
+                                                                                         'Lead_Concentration_(µg/L)' : ['mean'] ,
+                                                                                         'Bacteria_Count_(CFU/mL)' : ['mean'] }).reset_index()        
+#Creating The Conditions
+case_1A = water_treatment_methodB['Contaminant_Level_(ppm)'] < 500
+case_2A = (water_treatment_methodB['pH_Level'] < 8) & (water_treatment_methodB['pH_Level'] > 6.5)
+case_3A = water_treatment_methodB['Turbidity_(NTU)'] < 5
+case_4A = (water_treatment_methodB['Dissolved_Oxygen_(mg/L)'] > 6.5) & (water_treatment_methodB['Dissolved_Oxygen_(mg/L)'] < 8)
+case_5A = water_treatment_methodB['Nitrate_Level_(mg/L)'] < 10 
+case_6A = water_treatment_methodB['Lead_Concentration_(µg/L)'] < 15
+case_7A = water_treatment_methodB['Bacteria_Count_(CFU/mL)'] < 100 
+#Applying The Conditions 
+water_treatment_methodB['contaminant_level_reading']          = case_1A.map(lambda x: 'Contaminant Level Is Safe' if x else 'Contaminant Level Is Not Safe')
+water_treatment_methodB['pH_Level_reading']                   = case_2A.map(lambda x: 'pH Level Is Safe' if x else'pH Level Is Not Safe')
+water_treatment_methodB['Turbidity_(NTU)_reading']            = case_3A.map(lambda x: 'Turbidity Level Is Safe' if x else 'Turbidity Level Is Not Safe')
+water_treatment_methodB['Dissolved_Oxygen_(mg/L)_reading']    = case_4A.map(lambda x: 'Dissolved Oxygen Level Is Safe' if x else 'Dissolved Oxygen Level Is Not Safe')
+water_treatment_methodB['Nitrate_Level_(mg/L)_reading']       = case_5A.map(lambda x: 'Nitrate Level Is Safe' if x else 'Nitrate Level Is Not Safe')
+water_treatment_methodB['Lead_Concentration_(µg/L)_reading']  = case_6A.map(lambda x: 'Lead Concentration Level Is Safe' if x else 'Lead Concentration Level Is Not Safe')
+water_treatment_methodB['Bacteria_Count_(CFU/mL)_reading']    = case_7A.map(lambda x: 'Bacteria Count Leve Is Safe' if x else 'Bacteria Count Leve Is Not Safe')
+#Rearranging The Table
+water_treatment_methodB = water_treatment_methodB[['Water_Treatment_Method','Diarrheal_Cases_per_100,000_people',
+                                                   'Cholera_Cases_per_100,000_people',
+                                                   'Typhoid_Cases_per_100,000_people',
+                                                   'Infant_Mortality_Rate_(per_1,000_live_births)',
+                                                   'Contaminant_Level_(ppm)',
+                                                   'contaminant_level_reading',
+                                                   'pH_Level','pH_Level_reading',
+                                                   'Turbidity_(NTU)',
+                                                   'Turbidity_(NTU)_reading',
+                                                   'Dissolved_Oxygen_(mg/L)',
+                                                   'Dissolved_Oxygen_(mg/L)_reading',
+                                                   'Nitrate_Level_(mg/L)',
+                                                   'Nitrate_Level_(mg/L)_reading',
+                                                   'Lead_Concentration_(µg/L)',
+                                                   'Lead_Concentration_(µg/L)_reading',
+                                                   'Bacteria_Count_(CFU/mL)',
+                                                   'Bacteria_Count_(CFU/mL)_reading']].round(0)
+#Removing The Multi Index 
+water_treatment_methodB.columns = [ f' {col[0]}_{col[1]} ' if col[1] else col[0] for col in water_treatment_methodB.columns]
+water_treatment_methodB
+
+
+#Water Treatment Method Used In Different Types Of Water Source
+water_source = water_pollution[['Water_Source_Type',
+                                'Water_Treatment_Method']].groupby(['Water_Treatment_Method',
+                                                                    'Water_Source_Type']).agg({'Water_Source_Type' : ['size']}).reset_index()
+#Removing The Multi Index
+water_source.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in water_source.columns]
+#Renaming THe Columns
+water_source = water_source.rename(columns = {'Water_Source_Type_size' : 'count'})
+water_source
+
+
+#The Most Used Water Treatment In 2024
+#Filtering THe Data
+year_2024 = water_pollution[water_pollution['Year'] == 2024]
+#Grouping The Data
+groupb_by_Water_treatment_method = year_2024.groupby('Water_Treatment_Method')
+#Counting The Water_Treatment_Method
+counts = year_2024['Water_Treatment_Method'].value_counts()
+#Summing The Counted Values
+sum_values =  counts.sum()
+#Creating The Percentage For Water Treatment Method
+percentage = groupb_by_Water_treatment_method.size() / sum_values *100
+#Creating The Data Frame 
+most_used_water_treatment =  pd.DataFrame(percentage).reset_index().round(2)
+#Rennaming The Column
+most_used_water_treatment.columns = ['Water_Treatment_Method','Percentage']
+most_used_water_treatment
+
+
+#Cases Of Diseases From 2000 To 2024
+#Creating The Table For cases_of_diseases
+cases_of_diseases = water_pollution[['Country',
+                                     'Diarrheal_Cases_per_100,000_people',
+                                     'Cholera_Cases_per_100,000_people',
+                                     'Typhoid_Cases_per_100,000_people']].groupby(['Country']).agg({'Diarrheal_Cases_per_100,000_people' : ['sum'] ,
+                                                                                                    'Cholera_Cases_per_100,000_people' : ['sum'] ,
+                                                                                                    'Typhoid_Cases_per_100,000_people' : ['sum'] }).reset_index()
+#Removing The Multi Index 
+cases_of_diseases.columns = [ f' {col[0]}_{col[1]} ' if col[1] else col[0] for col in cases_of_diseases.columns]
+cases_of_diseases
+
+
+#Average Acess To Clean Waters Through The Years
+clean_waters = water_pollution[['Country','Year','Access_to_Clean_Water_(%_of_Population)']].groupby(['Country','Year']).agg({'Access_to_Clean_Water_(%_of_Population)' : ['mean']}).sort_values(by = ['Country','Year'], ascending = [True,True]).reset_index() 
+#Removing The Multi Index
+clean_waters.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in clean_waters.columns]
+#Renaming The Columns
+clean_waters = clean_waters.rename(columns = {'Access_to_Clean_Water_(%_of_Population)_mean' : 'Access_to_Clean_Water_(%_of_Population)'}).round(2)
+clean_waters
+
+
+#Urbanization In Relation To Clean Water
+urbanization_clean_water =water_pollution[['Country','Urbanization_Rate_(%)','Access_to_Clean_Water_(%_of_Population)']].groupby(['Country']).agg({'Urbanization_Rate_(%)' : ['mean'], 'Access_to_Clean_Water_(%_of_Population)' :['mean']}).reset_index().round(2)
+urbanization_clean_water.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in urbanization_clean_water.columns]
+urbanization_clean_water
+
+
+#Access To Clean Water In Relation To The Sanitary Coverage
+access_clean_water =water_pollution[['Country','Access_to_Clean_Water_(%_of_Population)','Sanitation_Coverage_(%_of_Population)']].groupby(['Country']).agg({'Access_to_Clean_Water_(%_of_Population)' : ['mean'], 'Sanitation_Coverage_(%_of_Population)' :['mean']}).reset_index().round(2)
+access_clean_water.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in access_clean_water.columns]
+#access_clean_water
+
+#Visualization
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+
+#Clean Waters Through The Years(Area Graph)
+#Pivot The Data
+clean_water_pivot = clean_waters .pivot(index = 'Year' ,
+                                        columns = 'Country', 
+                                        values = 'Access_to_Clean_Water_(%_of_Population)')
+#Creating The Area Plot
+clean_water_pivot.plot(kind = 'area', stacked = True, alpha = 0.6)
+plt.title('Clean Waters Through The Years')
+plt.xlabel('Years')
+plt.ylabel('Access To Clean Water')
+plt.grid(True)
+plt.tight_layout()
+# We'll iterate through each year (x) and stack the heights (y) for annotation
+for year in clean_water_pivot.index:
+    cumulative = 0
+    for country in clean_water_pivot.columns:
+        value = clean_water_pivot.loc[year, country]
+        if not pd.isna(value) and value > 0:
+            cumulative += value
+            plt.text(
+                year,
+                cumulative - value / 2,
+                f'{int(value):,}%',
+                ha='center', va='center',
+                fontsize=6, alpha=0.7
+            )
+
+
+
+#The Most Dangerous Water Type(Bar Graph)
+dangerous_water_type = water_source_mean[['Water_Source_Type',
+                                          'Contaminant_Level_(ppm)_mean',
+                                          'pH_Level_mean',
+                                          'Turbidity_(NTU)_mean',
+                                          'Dissolved_Oxygen_(mg/L)_mean',
+                                          'Nitrate_Level_(mg/L)_mean',
+                                          'Lead_Concentration_(µg/L)_mean',
+                                          'Bacteria_Count_(CFU/mL)_mean']]
+x = np.arange(len(dangerous_water_type['Water_Source_Type']))
+plt.figure(figsize=(14, 6))
+bar_width = 0.1
+bar1 = plt.bar(x-3*bar_width,dangerous_water_type['Contaminant_Level_(ppm)_mean'],width=bar_width, label = 'Contaminant Level (ppm)',color = 'blue')
+bar2 = plt.bar(x-2*bar_width, dangerous_water_type['pH_Level_mean'], width=bar_width, label='pH Level mean', color='red')
+bar3 = plt.bar(x-1*bar_width,dangerous_water_type['Turbidity_(NTU)_mean'],width=bar_width, label = 'Turbidity (NTU)',color = 'green')
+bar4 = plt.bar(x,dangerous_water_type['Dissolved_Oxygen_(mg/L)_mean'],width=bar_width, label = 'Dissolved_Oxygen_(mg/L)_mean',color = 'yellow')
+bar5 = plt.bar(x+ 1*bar_width,dangerous_water_type['Nitrate_Level_(mg/L)_mean'],width=bar_width, label = 'Nitrate_Level_(mg/L)',color = 'brown')
+bar6 = plt.bar(x+ 2*bar_width,dangerous_water_type['Lead_Concentration_(µg/L)_mean'],width=bar_width, label = 'Lead_Concentration_(µg/L)',color = 'pink')
+#plt.bar(x+ 3*bar_width,dangerous_water_type['Bacteria_Count_(CFU/mL)_mean'],width=bar_width, label = 'Bacteria_Count_(CFU/mL)',color = 'violet')
+
+#Adding The Values In The Bar Graph
+for bars in [bar1, bar2, bar3, bar4, bar5, bar6]:
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width()/2, height + 0.02, f'{height:.2f}',
+                 ha='center', va='bottom', fontsize=6, rotation=0)
+# Add labels and title
+plt.xlabel('Water Source Type')
+plt.ylabel('Values')
+plt.title('Most Dangerous Water Type')
+# Add x-ticks for Water Source Types
+plt.xticks(x, dangerous_water_type['Water_Source_Type'])
+# Add a legend
+plt.legend()
+# Adjust layout
+plt.tight_layout()
+plt.show()
+
+
+#Cases Of Diseases Per Country(Bar Graph)
+#Setting The Index
+cases_of_diseases.set_index('Country' , inplace =True)
+ax = cases_of_diseases.plot(kind='bar', stacked=True, figsize=(10, 6))
+
+# Add value labels on each segment of the stacked bars
+for container in ax.containers:
+    ax.bar_label(container, label_type = 'center', fontsize = 8, color = 'white')
+
+#Creating The Bar Chart 
+plt.xlabel('Country')
+plt.ylabel('Cases Of Diseases')
+plt.title('Cases Of Diseases Per Country')
+plt.tight_layout()
+
+
+#Urbanization In Relation To The Access To Clean Water(Scatter Plot)
+sns.lmplot(
+    data = urbanization_clean_water,
+    x = 'Urbanization_Rate_(%)_mean',
+    y = 'Access_to_Clean_Water_(%_of_Population)_mean',
+    height = 6,
+    aspect = 1.5,
+    line_kws = {'color' : 'red'} )
+#Assigning The x,y And Title
+plt.xlabel('Urbanization_Rate')
+plt.ylabel('Access_to_Clean_Water')
+plt.title('Urbanization In Relation To The Access To Clean Water')
+plt.grid(True)
+    
+#Access To Clean Water In Relation To The Sanitary Coverage(Scatter Plot)
+sns.lmplot(
+    data = access_clean_water,
+    x = 'Sanitation_Coverage_(%_of_Population)_mean',
+    y = 'Access_to_Clean_Water_(%_of_Population)_mean',
+    height = 6,
+    aspect = 1.5,
+    line_kws = {'color' : 'red'} )
+#Assigning The x,y And Title
+plt.xlabel('Sanitation_Coverage')
+plt.ylabel('Access_to_Clean_Water')
+plt.title('Access To Clean Water In Relation To The Sanitary Coverage')
+plt.grid(True)
+
+
+#The Most Used Water Treatment(Pie Graph)
+#Creating Pie Chart
+colors = ['#ff9999','#66b3ff','#99ff99','#ffb3e6']
+plt.figure(figsize = (5,5))
+plt.pie(most_used_water_treatment['Percentage'],
+        labels = most_used_water_treatment['Water_Treatment_Method'],
+        colors = colors,
+        autopct = '%1.1f%%',
+        startangle =100)
+
+#Assigning The x,y and Title
+plt.axis('equal')
+plt.title('#The Most Used Water Treatment')
+plt.show()
+
