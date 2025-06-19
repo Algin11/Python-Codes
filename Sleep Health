@@ -1,0 +1,422 @@
+#Importing The Pandas
+import pandas as pd
+
+#Importing The Data Set
+sleep_health = pd.read_csv(r"D:\Data Analyst\Data analyst\PROJECTS\SLEEP HEALTH\raw files\Sleep_health_and_lifestyle_dataset.csv")
+
+#Chekcing For Duplication
+sleep_health.duplicated().sum()
+
+#Checking For Nulls
+sleep_health.isnull().sum()
+
+#Setting The Max Rows And Columns 
+pd.set_option('display.max.rows',374)
+pd.set_option('display.max.columns',374)
+
+#Replacing The NA to NONE
+sleep_health = sleep_health.fillna('None')
+
+#Replacing The NA to NONE
+sleep_health['BMI_Category'] = sleep_health['BMI_Category'].replace('Normal' , 'Normal Weight' )
+
+
+#Data Manipulation
+
+#Number of People Per Occupation
+People_per_Occupation = sleep_health['Occupation'].value_counts()
+People_per_Occupation = pd.DataFrame(People_per_Occupation).reset_index()
+People_per_Occupation
+
+
+#BMI Category Group By Number Of Peolple
+count_BMI = sleep_health['BMI_Category'].value_counts()
+#Creating Data Frame In The Created Table
+count_BMI = pd.DataFrame(count_BMI).reset_index()
+count_BMI
+
+
+
+#Occupation Group By Gender And Age
+occupation_group_by_age_gender = sleep_health[['Occupation',
+                                               'Gender', 
+                                               'Age']].groupby(['Occupation',
+                                                                'Gender']).agg({'Gender' :['count'] , 
+                                                                                'Age' : ['mean',
+                                                                                         'max',
+                                                                                         'min']}).reset_index()
+#Removing THe Multi Index
+occupation_group_by_age_gender.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in occupation_group_by_age_gender.columns ] 
+#Sorting The Table
+occupation_group_by_age_gender = occupation_group_by_age_gender.sort_values(by = ['Occupation','Gender'], ascending = [True,False]).round(0)
+occupation_group_by_age_gender
+
+
+
+#Average Sleep, Physical Activity, Stress Level, Heart Rate and Daily Steps
+avg_table = sleep_health[['Occupation', 
+                          'Gender', 
+                          'Age', 
+                          'Sleep_Duration',
+                          'Quality_of_Sleep' ,
+                          'Physical_Activity_Level', 
+                          'Stress_Level', 
+                          'Heart_Rate', 
+                          'Daily_Steps']].groupby(['Occupation', 
+                                                   'Gender']).agg({  'Age' : ['mean'],
+                                                                   'Sleep_Duration' : ['mean'],
+                                                                   'Quality_of_Sleep' : ['mean'] , 
+                                                                   'Physical_Activity_Level' : ['mean'],
+                                                                   'Stress_Level' : ['mean'],
+                                                                   'Heart_Rate' : ['mean'],
+                                                                   'Daily_Steps' : ['mean']}).sort_values(by = ['Occupation','Gender'], ascending = [True, False]).reset_index()  
+#Removing The  Multi Index
+avg_table.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in avg_table.columns ]
+#Rounding The Table To Two Decimal Places
+avg_table = avg_table.round(2)
+avg_table
+
+
+
+#Stress Level Of A Person With Sleeping Disorders
+disorder_and_stress = sleep_health[['Occupation',
+                                    'Sleep_Disorder', 
+                                    'Stress_Level' ]].groupby(['Occupation',
+                                                               'Sleep_Disorder']).agg({'Sleep_Disorder' : ['count'], 
+                                                                                       'Stress_Level' : ['mean'] }).reset_index().round(2)    
+#Removing The Multi Index
+disorder_and_stress.columns =  [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in disorder_and_stress.columns]
+disorder_and_stress
+
+
+
+#Physical Activity Of A Person With Sleeping Disorders
+physical_activity = sleep_health[['Occupation',
+                                  'Sleep_Disorder',
+                                  'Physical_Activity_Level']].groupby(['Occupation',
+                                                                       'Sleep_Disorder']).agg({'Sleep_Disorder' : ['count'], 
+                                                                                               'Physical_Activity_Level' : ['mean']}).reset_index().round(2)
+#Removing The Multi Index
+physical_activity.columns =  [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in physical_activity.columns]
+physical_activity
+
+
+#Quality Of Sleep Of A Person With Sleeping Disorders
+sleep_disorder = sleep_health[['Occupation',
+                               'Sleep_Disorder',
+                               'Quality_of_Sleep']].groupby(['Occupation',
+                                                             'Sleep_Disorder']).agg({'Sleep_Disorder' : ['count'], 
+                                                                                     'Quality_of_Sleep' : ['mean']}).reset_index().round(2)
+#Removing The Multi Index
+sleep_disorder.columns =  [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in sleep_disorder.columns]
+sleep_disorder
+
+
+#Percentage Of A Person With Sleeping Disorder Group By Gender
+percent_sleep_disorder = sleep_health[['Gender', 
+                                       'Sleep_Disorder']].groupby(['Gender',
+                                                                   'Sleep_Disorder']).agg({'Sleep_Disorder' : ['count']}).reset_index()
+#Removing The Multi Index
+percent_sleep_disorder.columns =  [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in percent_sleep_disorder.columns]
+#Inserting The Percentage In The Table
+percent_sleep_disorder['Percentage'] = percent_sleep_disorder['Sleep_Disorder_count'] / percent_sleep_disorder.groupby(['Gender'])['Sleep_Disorder_count'].transform('sum') * 100
+#Ordering THe Data
+percent_sleep_disorder = percent_sleep_disorder.sort_values(by = ['Gender','Sleep_Disorder'], ascending = [False,True]).round(2)
+percent_sleep_disorder
+
+
+#Sleep Disorder Group By Occupation
+disorder_by_occupation = sleep_health[['Occupation',
+                                       'Sleep_Disorder']].groupby(['Occupation',
+                                                                   'Sleep_Disorder']).agg({'Sleep_Disorder' : ['count']})
+#Inserting The Percentage In The Table
+disorder_by_occupation['Percentage'] = disorder_by_occupation['Sleep_Disorder'] / disorder_by_occupation['Sleep_Disorder'].groupby(['Occupation']).sum()*100
+
+#Removing The Multi Index
+disorder_by_occupation.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in disorder_by_occupation.columns]
+#Resetting The Index
+disorder_by_occupation = disorder_by_occupation.reset_index().round(2)
+disorder_by_occupation
+
+
+#Average Age Of Sleep Disorders
+avg_sleep = sleep_health[['Sleep_Disorder','Age']].groupby(['Sleep_Disorder']).agg({'Age' : ['mean']}).reset_index()
+#Removing The Multi Index
+avg_sleep.columns =  [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in avg_sleep.columns]
+#Rounding The Data
+avg_sleep = avg_sleep.round(0)
+avg_sleep
+
+
+#Percentage of Genders
+percent_gender = pd.DataFrame(sleep_health['Gender'].value_counts()).sort_values(by = ['Gender'], ascending = False)
+#Resetting The Index
+percent_gender = percent_gender.reset_index()
+#Inserting The Percentage In The Data
+percent_gender['Percentage']  = percent_gender[['count']] / percent_gender[['count']].sum()*100
+percent_gender
+
+
+#Count of Genders Group By Occupation
+gender_occupation = sleep_health[['Occupation', 'Gender']].groupby(['Occupation', 'Gender']).agg({'Gender' : ['count']}).reset_index()
+gender_occupation.columns =  [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in gender_occupation.columns]
+gender_occupation
+
+
+#BMI Category Group by Gender 
+BMI_gender = sleep_health[['BMI_Category', 'Gender']].groupby(['BMI_Category', 'Gender']).agg({'Gender' : ['count']}).reset_index()
+#Removing The Multi Index
+BMI_gender.columns =  [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in BMI_gender.columns]
+#Inserting The Percentage 
+BMI_gender['Percentage'] = BMI_gender['Gender_count'] / BMI_gender.groupby(['Gender'])['Gender_count'].transform('sum') *100 
+BMI_gender = BMI_gender.round(2).sort_values(by = ['Gender','BMI_Category'], ascending = [False,True])
+BMI_gender 
+
+
+#Visualization
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+
+# Sleep Disorder Based Group By Occupation(Bar Graph)
+# Pivot the data
+pivot_data = disorder_by_occupation.pivot(
+    index='Occupation',
+    columns='Sleep_Disorder',
+    values='Sleep_Disorder_count'
+)
+# Calculate the total count per occupation for percentage calculation
+row_totals = pivot_data.sum(axis=1)
+# Create the bar plot and capture the Axes object
+ax = pivot_data.plot(kind='bar', stacked=True, figsize=(10, 6))
+# Add percentage labels to each bar segment
+for bars, disorder in zip(ax.containers, pivot_data.columns):
+    for i, bar in enumerate(bars):
+        height = bar.get_height()
+        if height > 0:
+            total = row_totals.iloc[i]
+            percent = (height / total) * 100
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_y() + height / 2,
+                f'{percent:.1f}%',
+                ha='center',
+                va='center',
+                fontsize=8,
+                color='white'
+            )
+# Customize the plot
+plt.title('Sleep Disorder Grouped by Occupation')
+plt.xlabel('Occupation')
+plt.ylabel('Count of Sleep Disorders')
+plt.xticks(rotation=45, fontsize=8)
+plt.tight_layout()
+plt.show()
+
+
+
+#Sleep Disorder Based On Gender(Bar Graph)
+#Pivot The Data
+pivot_data_disorder = percent_sleep_disorder.pivot( index = 'Gender',
+                                                    columns = 'Sleep_Disorder',
+                                                   values = 'Sleep_Disorder_count' )
+# Calculate the total count per occupation for percentage calculation
+row_totals_disorder = pivot_data_disorder.sum(axis=1)
+# Create the bar plot and capture the Axes object
+ax = pivot_data_disorder.plot(kind = 'bar', stacked = True, figsize = (10,6))
+# Add percentage labels to each bar segment
+for bars, disorder in zip(ax.containers, pivot_data_disorder.columns):
+    for i, bar in enumerate(bars):
+        height = bar.get_height()
+        if height > 0:
+            total = row_totals_disorder.iloc[i]
+            percent = (height / total) * 100
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_y() + height / 2,
+                f'{percent:.1f}%',
+                ha='center',
+                va='center',
+                fontsize=8,
+                color='white'
+            )        
+# Customize the plot
+plt.title('Sleep Disorder Based On Gender')
+plt.xlabel('Gender')
+plt.ylabel('Sleep Disorder')
+plt.xticks(rotation=45, fontsize=8)
+plt.tight_layout()
+plt.show()
+
+
+
+#Stress Compared To Sleep Disorder(Scatter Plot)
+sns.lmplot(
+    data = disorder_and_stress,
+    x = 'Sleep_Disorder_count',
+    y = 'Stress_Level_mean',
+    height = 6,
+    aspect = 1.5,
+    line_kws = {'color' : 'red'}
+           )
+#Assigning The x,y and Title
+plt.xlabel('Sleep Disorder')
+plt.ylabel('Stress Level')
+plt.title('Stress Compared To Sleep Disorder')
+plt.grid(True)
+
+
+#Quality of Sleep Compared To Sleep Disorder(Scatter Plot)
+sns.lmplot(
+    data = sleep_disorder,
+    x = 'Sleep_Disorder_count',
+    y = 'Quality_of_Sleep_mean',
+    height = 6,
+    aspect = 1.5,
+    line_kws = {'color' : 'red'}
+            )
+#Assigning The x,y and Title
+plt.xlabel('Sleep Disorder')
+plt.ylabel('Quality Of Sleep')
+plt.title('Quality of Sleep Compared To Sleep Disorder')
+plt.grid(True)
+
+
+#Physical Acticity Compared To Sleep Disorder(Scatter Plot)
+sns.lmplot(
+    data = physical_activity,
+    x = 'Sleep_Disorder_count',
+    y = 'Physical_Activity_Level_mean',
+    height = 6,
+    aspect = 1.5,
+    line_kws = {'color' : 'red'}
+            )
+#Assigning The x,y and Title
+plt.xlabel('Sleep Disorder')
+plt.ylabel('Physical Activity')
+plt.title('Physical Acticity Compared To Sleep Disorder')
+plt.grid(True)
+
+
+#Count of Genders In The Data(Pie Graph)
+#Creating Pie Chart
+colors = ['#ff9999','#66b3ff']
+plt.figure(figsize = (6,6))
+plt.pie(percent_gender['Percentage'], 
+        labels = percent_gender['Gender'],
+        colors=colors, 
+        autopct = '%1.1f%%',
+        startangle = 140)
+#Assigning The x,y and Title
+plt.axis('equal')
+plt.title('Gender Distribution In Data Set')
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
