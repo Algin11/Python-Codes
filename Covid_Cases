@@ -1,0 +1,323 @@
+#Importing The Pandas
+import pandas as pd
+pd.options.mode.copy_on_write = True 
+
+#Importing the Data Set
+Covid_Vaccination = pd.read_csv(r"D:\Data Analyst\Data analyst\PROJECTS\COVID CASES\raw files\CovidVaccination.csv")
+Covid_Death = pd.read_csv(r"D:\Data Analyst\Data analyst\PROJECTS\COVID CASES\raw files\CovidDeaths.csv")
+
+#Setting The Max Rows And Columns 
+pd.set_option('display.max.rows',344818) 
+pd.set_option('display.max.columns',344818) 
+
+# Checking for Duplicate 
+Covid_Vaccination.duplicated().sum()
+Covid_Death.duplicated().sum()
+
+#Finding Null
+Covid_Vaccination.isnull().sum()
+Covid_Death.isnull().sum()
+
+#Converting The Date From Object To DateTime
+Covid_Vaccination['date'] = pd.to_datetime(Covid_Vaccination['date'], format = '%d/%m/%Y', errors='coerce')
+Covid_Death['date'] = pd.to_datetime(Covid_Death['date'], format = '%d/%m/%Y', errors='coerce')
+pd.options.mode.copy_on_write = True
+
+#Data Exploration
+
+#Table For Infection Rate, Death And People Vaccianted
+#Creating Table For Total Cases And Total Deaths
+table1 = Covid_Death[['location','population','total_cases','total_deaths']].groupby(['location']).agg({'total_cases' : ['max'], 'total_deaths' : ['max']}).reset_index()
+#Removing The Multi Index
+table1.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in table1.columns] 
+#Creating Table For Vacciantions
+table2 = Covid_Vaccination[['location','people_vaccinated']].groupby(['location']).agg({'people_vaccinated' : ['max']}).reset_index()
+#Removing The Multi Index
+table2.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in table2.columns] 
+#Merging The Two Table
+general_table = pd.merge(table1,table2, on = ['location'], how = 'inner')
+general_table 
+
+
+#Table For Total Cases With Percentage
+Table_for_Cases = Covid_Death[['location',
+                             'date',
+                             'population',
+                             'new_cases',
+                             'total_cases', ]]
+#Creating A Table For Percentage Of Cases
+case_percentage = Covid_Death['total_cases'] / Covid_Death ['population'] * 100 
+# Inserting The Case Percentage In The Table
+Table_for_Cases['case_percentage'] = case_percentage 
+
+
+#Table For Total Cases With Percentage
+Table_for_Cases = Covid_Death[['location',
+                             'date',
+                             'population',
+                             'new_cases',
+                             'total_cases', ]]
+#Creating A Table For Percentage Of Cases
+case_percentage = Covid_Death['total_cases'] / Covid_Death ['population'] * 100 
+# Inserting The Case Percentage In The Table
+Table_for_Cases['case_percentage'] = case_percentage 
+Table_for_Cases
+
+
+#Countries With The Highest Infection Rate
+#Creating Table For Infection Rate
+Infection_Rate = Covid_Death[['location',
+                                  'population',
+                                  'total_cases']].groupby(['location','population']).agg({'total_cases':['max']}).reset_index()
+# Separating The Multi Index To Create New Column
+Infection_Rate.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in Infection_Rate.columns] 
+#Creating For The Infection Rate 
+Infection_Rate['infection_rate'] = Infection_Rate['total_cases_max'] / Infection_Rate[('population')] * 100
+#Inserting The Infection Rate In The Table
+Infection_Rate = Infection_Rate.sort_values(['infection_rate'], ascending = [False]) 
+Infection_Rate
+
+
+#Countries With The Highest Cases Per Country
+Highest_Cases = Covid_Death[['location',
+                              'population',
+                              'total_cases']].groupby(['location','population']).agg({'total_cases':['max']}).reset_index()
+
+# Separating The Multi Index To Create New Column
+Highest_Cases.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in Highest_Cases.columns]
+
+#Ordering The Data From The Highest Cases
+Highest_Cases = Highest_Cases.sort_values( by =['total_cases_max'] , ascending = False)
+#Creating For The Infection Rate 
+Highest_Cases['infection_rate'] = Highest_Cases['total_cases_max'] / Infection_Rate[('population')] * 100
+Highest_Cases
+
+
+#Countries With The Highest Death Count
+Highest_Death_Count = Covid_Death[['location',
+                                     'total_deaths']].groupby(['location']).agg({'total_deaths' : ['max']}).sort_values(by = ('total_deaths','max'), ascending = False).reset_index()
+#Removing The Multi Index 
+Highest_Death_Count.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in Highest_Death_Count.columns]
+Highest_Death_Count
+
+
+#Death Counts Per Continent     
+#Creating Table From The Filtered Data
+death_continent = Covid_Death[['continent', 'total_deaths']].groupby(['continent']).agg({'total_deaths' : ['max']}).sort_values(by = ('continent'), ascending = True ).reset_index()
+#Removing The Multi Index
+death_continent.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in death_continent.columns]
+death_continent
+
+
+#Global Numbers
+#Merging The Table Covid Vaccinationa and Covid Death
+global_numbers = pd.merge(Covid_Vaccination,Covid_Death, on = ['iso_code','continent', 'location','date','population'], how = 'inner')
+            
+#Creating The Table From The Filtered Data
+global_numbers= global_numbers[['location', 
+                                    'date',
+                                    'population',
+                                    'total_cases',
+                                    'total_deaths', 
+                                    'people_vaccinated']] 
+#Creating Table With agrregation 
+global_numbers = global_numbers.groupby(['location']).agg({'date' : ['max'] ,
+                                                                   'population' : ['max'],
+                                                                   'total_cases' : ['max'],
+                                                                   'total_deaths' : ['max'], 
+                                                                   'people_vaccinated' : ['max']}).reset_index()
+
+#Removing The Multi Index
+global_numbers.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in global_numbers.columns]
+
+
+
+max_population = global_numbers['population_max'].sum()
+max_total_cases = global_numbers['total_cases_max'].sum()
+max_total_death = global_numbers['total_deaths_max'].sum()
+max_people_vaccinated = global_numbers['people_vaccinated_max'].sum()
+
+new_global_numbers = pd.DataFrame([{'Population' : max_population,
+                                    'Total_Cases' : max_total_cases,
+                                    'Total_Deaths' : max_total_death,
+                                    'people_vaccinated' : max_people_vaccinated }])
+
+#Creating The Death Percentage
+new_global_numbers['death_percentage'] = new_global_numbers['Total_Deaths'] / new_global_numbers['Population'] *100
+new_global_numbers
+
+
+#People Vaccinated
+#Merging The Table Covid Vaccination And Covid Deaths
+vaccination_death = pd.merge(Covid_Vaccination,Covid_Death, on = ['iso_code','continent', 'location','date','population'], how = 'outer')
+#Creating Table From The Filtered Data
+new_vaccination_death = vaccination_death[['continent', 'location', 'date', 'population','new_vaccinations']].sort_values(by = (['location', 'date']))
+pd.options.mode.copy_on_write = True
+#Inserting The The Aggreated Data In The Table
+new_vaccination_death['people vaccinated'] = new_vaccination_death.groupby(['location'])['new_vaccinations'].expanding().sum().reset_index(level = 0, drop = True)
+new_vaccination_death
+
+
+#People Vaccinated With Percentage
+#Creating Percentage Vaccination 
+new_vaccination_death['percentage vaccinated']=new_vaccination_death['people vaccinated'] / new_vaccination_death['population'] *100
+#Filling The NA Table
+new_vaccination_death['percentage vaccinated']=new_vaccination_death['percentage vaccinated'].fillna(0)
+new_vaccination_death
+
+
+#Total Cases And Total Death Per Country
+#Creating Table For Total Cases And Death 
+death_per_country = Covid_Death[['location', 'total_cases', 'total_deaths']]
+#Aggregating The Data To Find The Total Maximum Of Cases And Deaths
+death_per_country = death_per_country.groupby(['location']).agg({'total_cases' : ['max'], 'total_deaths' : ['max']}).reset_index()
+#Removing The Muylti Index
+death_per_country.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in death_per_country.columns]
+#death_per_country
+
+
+#Total Vaccination And Total Death Per Country
+#Creating Table For Total Vaccination And Death
+vaccination_death_country = vaccination_death[['location', 'people_vaccinated', 'total_deaths']].reset_index()
+#Aggregating The Table To Find The Maximum Vaccination And Deaths
+vaccination_death_country = vaccination_death_country.groupby(['location']).agg({'people_vaccinated' : ['max'], 'total_deaths' : ['max']}).reset_index()
+#Removing The Multi Index
+vaccination_death_country.columns = [ f'{col[0]}_{col[1]}' if col[1] else col[0] for col in vaccination_death_country.columns]
+vaccination_death_country
+
+
+#Total Deaths Compared To Population
+#Creating Table For Deaths Compared To Population
+death_to_population = Covid_Death[['location', 'population','total_deaths']].sort_values(by = ['location'], ascending = True)
+#Aggreagating The Data To Find The Total Maximum Deaths
+death_to_population = death_to_population.groupby(['location', 'population']).agg({'total_deaths' : ['max']}).reset_index()
+#Removing The Multi Index
+death_to_population.columns = [f'{col[0]}_{col[1]}' if col[1] else col[0] for col in death_to_population.columns ] 
+death_to_population
+
+
+
+#Vissulaization
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+
+#Total Deaths Per Continents (Bar Chart)
+#Creating A Dictionary For list Of Colors
+continent_colors = {
+    'Asia': 'red',
+    'Europe': 'navy',
+    'Africa': 'green',
+    'North America': 'orange',
+    'South America': 'purple',
+    'Oceania': 'cyan'
+                    }
+
+#Sorting The Values From Highest To Lowest
+death_continent = death_continent.sort_values(by = ['total_deaths_max'], ascending = False)
+#Assigning The Colors To the death_continent['location']
+colors = death_continent['continent'].apply(lambda x: continent_colors.get(x, 'gray'))
+#Creating The Bar Chart 
+plt.bar(death_continent['continent'],death_continent['total_deaths_max'], color = colors  )
+plt.xlabel('Continent')
+plt.ylabel('Total Deaths')
+plt.title('Total Deaths by Continent')
+plt.xticks(rotation=45)  # Optional: rotates labels
+plt.tight_layout()
+#Adding The Value And Place It On Top 
+for i, value in enumerate(death_continent['total_deaths_max']):
+    plt.text(i, value + (value * 0.01), f'{int(value):,}', ha='center', va='bottom', fontsize=8)
+
+
+#Highest Covid Cases Per Country(Bar Chart)
+#Filtering The Data To The Top 5 Highest Covid Cases
+top_5_cases = Highest_Cases.nlargest(5,'total_cases_max')
+# Normalize for colormap
+norm = plt.Normalize(top_5_cases['total_cases_max'].min(), 
+                     top_5_cases['total_cases_max'].max())
+# Choose a colormap 
+colors = cm.YlOrRd(norm(top_5_cases['total_cases_max']))
+#Creating The Bar Chart 
+plt.bar(top_5_cases['location'], top_5_cases['total_cases_max'] , color = colors)
+plt.xlabel('Country')
+plt.ylabel('Covid Cases')
+plt.title('Highest Covid Cases')
+plt.tight_layout()
+#Adding The Value And Place It On Top
+for i, value in enumerate(top_5_cases['total_cases_max']):
+    plt.text(i, value + (value * 0.01), f'{int(value):,}', ha='center', va='bottom', fontsize=8)
+
+
+
+#Countries With Highest Death Counts(Bar Chart)
+#Filtering The Data To The Top 5 Highest Infection Rate
+top_5_highest_death_count = Highest_Death_Count.nlargest(5,'total_deaths_max')
+# Normalize for colormap
+norm = plt.Normalize(top_5_highest_death_count['total_deaths_max'].min(), 
+                     top_5_highest_death_count['total_deaths_max'].max())
+# Choose a colormap 
+colors = cm.YlOrRd(norm(top_5_highest_death_count['total_deaths_max']))
+#Creating The Bar Chart 
+plt.bar(top_5_highest_death_count['location'],top_5_highest_death_count['total_deaths_max'], color = colors)
+plt.xlabel('Country')
+plt.ylabel('Death Counts')
+plt.title('Highest Death Count')
+plt.tight_layout()
+#Adding The Value And Place It On Top
+for i, value in enumerate(top_5_highest_death_count['total_deaths_max']):
+    plt.text(i, value + (value * 0.01), f'{int(value):,}', ha='center', va = 'bottom' , fontsize = 8)
+
+
+#Death Compared To Population(Scatter Plot)
+#Creating The Scatter Plot
+sns.lmplot(
+    data=death_to_population,
+    x='population',
+    y='total_deaths_max',
+    height=6,
+    aspect=1.5,
+    line_kws={'color': 'red'}
+)
+#Assigning The x,y And Title
+plt.xlabel('Population')
+plt.ylabel('Total Deaths')
+plt.title('Population Compared To Deaths')
+plt.grid(True)
+
+
+#Total Vaccination To Death(Scatter Plot)
+#Creating The Scatter Plot
+sns.lmplot(
+    data = vaccination_death_country,
+    x = 'people_vaccinated_max',
+    y ='total_deaths_max',
+    height=6,
+    aspect=1.5,
+    line_kws={'color': 'red'}
+)
+#Assigning The x,y And Title
+plt.title('People Vaccinated Compared To Death')
+plt.xlabel('People Vaccinated')
+plt.ylabel('Total Death')
+plt.grid(True)
+
+
+#Death Compared To Total Cases(Scatter Plot)
+#Creating The Scatter Plot
+sns.lmplot(
+    data = death_per_country,
+    x = 'total_cases_max',
+    y = 'total_deaths_max',
+    height = 6,
+    aspect =1.5,
+    line_kws = {'color' : 'red'}
+)
+#Assigning The x,y And Title
+plt.title('Death Compared to Total Cases')
+plt.xlabel('Total Cases')
+plt.ylabel('Total Death')
+plt.grid(True)
+
+
+
